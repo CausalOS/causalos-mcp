@@ -1,4 +1,4 @@
-# CausalOS MCP v2.0
+# CausalOS MCP v1.0
 
 > **"Don't just remember the past. Use it to change the future."**
 
@@ -7,16 +7,16 @@ It actively shapes agent reasoning by injecting structured context (past failure
 
 ---
 
-## What's New in V2
+## What's New in V1
 
-| Feature | V1 | V2 |
-| :--- | :--- | :--- |
-| Memory | Passive (required Python backend) | Active local-first SQLite |
-| Risk check | Warning only | Warning + pattern + suggested fix |
-| Context | None | Optimized context injection |
-| Learning | None | Continuous hybrid model |
-| Behavior change | None | `causal_adapt` tool |
-| Dependencies | Requires `causal-os` Python server | **Zero dependencies. Runs standalone.** |
+| Feature | V1 |
+| :--- | :--- |
+| Memory | Active local-first SQLite |
+| Risk check | Warning + pattern + suggested fix |
+| Context | Optimized context injection |
+| Learning | Continuous hybrid model |
+| Behavior change | `causal_adapt` tool |
+| Dependencies | **Zero dependencies. Runs standalone.** |
 
 ---
 
@@ -57,7 +57,7 @@ Task → context_build → Agent → Action → causal_record → Future Improve
 ## Installation
 
 ```bash
-npx causal-os
+npx causalos-mcp
 ```
 
 All data is stored locally at `~/.causalos/memory.db`. No backend required.

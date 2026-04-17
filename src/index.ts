@@ -11,8 +11,8 @@ import { startSweeper } from "./sweeper.js";
 
 // ─── Server ───────────────────────────────────────────────────────────────────
 const server = new McpServer({
-  name: "causal-os",
-  version: "2.0.0",
+  name: "causalos-mcp",
+  version: "1.0.0",
 });
 
 // ─── Tool 1: context_build (NEW — Most Important) ─────────────────────────────
@@ -443,7 +443,7 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("CausalOS MCP v2.0 running — local-first decision intelligence active");
+  console.error("CausalOS MCP v1.0 running — local-first decision intelligence active");
 }
 
 main().catch((error) => {

@@ -18,7 +18,7 @@ CausalOS fixes this by:
 ### 1. Run with NPX
 You can run CausalOS instantly without installation:
 ```bash
-npx causal-os
+npx causalos-mcp
 ```
 
 ### 2. Configure Claude Desktop
@@ -27,9 +27,9 @@ Add CausalOS to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "causal-os": {
+    "causalos-mcp": {
       "command": "npx",
-      "args": ["-y", "causal-os"]
+      "args": ["-y", "causalos-mcp"]
     }
   }
 }

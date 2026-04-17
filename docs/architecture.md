@@ -1,4 +1,4 @@
-# CausalOS MCP V2: Agent-Improving Decision Intelligence Layer
+# CausalOS MCP V1: Agent-Improving Decision Intelligence Layer
 
 ## 1. Understanding Summary
 
