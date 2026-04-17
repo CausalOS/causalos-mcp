@@ -90,7 +90,7 @@ Your goal is not just to complete the task — it is to improve based on past ou
   "mcpServers": {
     "causalos": {
       "command": "npx",
-      "args": ["-y", "causal-os"]
+      "args": ["-y", "causalos-mcp"]
     }
   }
 }
