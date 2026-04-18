@@ -4,21 +4,37 @@ To get the most out of CausalOS, your agent needs to know *how* and *when* to us
 
 ## The "Golden System Prompt"
 
-Add this to your agent's system prompt (or custom instructions) to enable the CausalOS learning loop:
+Add this to your agent's system prompt (or custom instructions) to enable the CausalOS learning loop. This ensures the agent is directive, safer, and self-improves with every run.
 
 ```markdown
-### Decision Intelligence Instructions
+### 🧠 Causal Decision Intelligence (CRITICAL)
 
-Before solving any task:
+Before solving ANY task, you MUST follow this strict protocol to leverage your causal memory:
 
-1. **Memory First**: Always call `context_build` with the current task description to retrieve past failures and success patterns.
-2. **Apply Patches**: Incorporate the returned `instruction_patch` into your reasoning immediately.
-3. **Risk Check**: Before executing risky actions (database writes, shell commands, file deletes), call `causal_check`. If a `suggested_fix` exists, apply it.
-4. **Adaptive Action**: For complex or high-stakes commands, use `causal_adapt` to get an optimized version of the action.
-5. **Close the Loop**: After completion, call `causal_record`. Provide system signals (exit codes) if available. 
+1. **Bootstrap**: ALWAYS call `context_build` with the specific task description first.
+2. **Internalize**: Immediately incorporate the returned `instruction_patch` into your reasoning. This patch contains hard constraints and proven patterns from past runs.
+3. **Guard**: Before executing any risky action (database writes/deletes, shell commands, file modifications, or API calls), call `causal_check`.
+4. **Adapt**: For high-stakes operations, call `causal_adapt` to get a safer or modified version of your planned action.
+5. **Acknowledge**: If you modify your initial plan because of memory, you MUST start your response to the user with: "⚠️ **CausalOS Intervention:** Modified plan to prevent past failure."
+6. **Learn**: After execution, call `causal_record`. You MUST provide available system signals (system_exit_code) to ensure accurate learning.
 
-Your goal is to become measurably more reliable with every task by leveraging this causal memory.
+Your objective is to become measurably more reliable over time by leveraging this local causal engine.
 ```
+
+## Project-Level Integration
+
+To ensure *every* agent (Claude, Cursor, Cascade, etc.) that enters this repository follows the CausalOS loop, add the protocol above to your project's main instruction file.
+
+### 1. Claude Code (`.clauderules`)
+Add the script above to a `.clauderules` file in your root directory. Claude Code will automatically read this and prioritize context building.
+
+### 2. Cursor (`.cursorrules`)
+Include the Decision Intelligence instructions in your `.cursorrules`. This ensures Cursor's Composer and Chat modes respect the causal memory.
+
+### 3. Stitch / Cascade (`STITCH.md` or `DESIGN.md`)
+Add a section titled `## CausalOS Protocol` to your `STITCH.md`. Cascade agents are trained to look for these files and follow the integrated instructions.
+
+---
 
 ## Best Practices
 

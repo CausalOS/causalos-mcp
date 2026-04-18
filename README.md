@@ -66,20 +66,24 @@ All data is stored locally at `~/.causalos/memory.db`. No backend required.
 
 ## Agent System Prompt (Mandatory for Best Results)
 
-Add this to your agent's system prompt:
+Add this to your agent's system prompt (or custom instructions) to enable the CausalOS learning loop. This ensures the agent is directive, safer, and self-improves with every run.
 
+```markdown
+### 🧠 Causal Decision Intelligence (CRITICAL)
+
+Before solving ANY task, you MUST follow this strict protocol to leverage your causal memory:
+
+1. **Bootstrap**: ALWAYS call `context_build` with the specific task description first.
+2. **Internalize**: Immediately incorporate the returned `instruction_patch` into your reasoning. This patch contains hard constraints and proven patterns from past runs.
+3. **Guard**: Before executing any risky action (database writes/deletes, shell commands, file modifications, or API calls), call `causal_check`.
+4. **Adapt**: For high-stakes operations, call `causal_adapt` to get a safer or modified version of your planned action.
+5. **Acknowledge**: If you modify your initial plan because of memory, you MUST start your response to the user with: "⚠️ **CausalOS Intervention:** Modified plan to prevent past failure."
+6. **Learn**: After execution, call `causal_record`. You MUST provide available system signals (system_exit_code) to ensure accurate learning.
+
+Your objective is to become measurably more reliable over time by leveraging this local causal engine.
 ```
-Before solving any task:
 
-1. Call `context_build` with the task description to retrieve relevant memory and constraints.
-2. Incorporate the returned `instruction_patch` into your reasoning immediately.
-3. Before executing risky actions (database writes/deletes, shell commands, file modifications), call `causal_check`.
-4. If `suggested_fix` is returned, apply it before proceeding.
-5. For high-risk actions, call `causal_adapt` to get a safer version of your planned action.
-6. After execution, call `causal_record` with anchor_id, outcome, and available system signals (exit code).
-
-Your goal is not just to complete the task — it is to improve based on past outcomes.
-```
+See [Agent Integration](docs/agent-integration.md) for more details on project-level setup.
 
 ---
 
