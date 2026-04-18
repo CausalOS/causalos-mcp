@@ -93,11 +93,24 @@ create index idx_project on causal_events(project_name);
 5. **Learning Write**
    - Creates `causal_events` feeding into the `context_build` for the next run.
 
-### Key Rules
-- **Rule 1:** Anchors persist in SQLite (Not RAM).
-- **Rule 2:** Idempotency via `anchor_id`.
-- **Rule 3:** Inference over blocking forever.
-- **Rule 4:** `context_build` can override default adaptive TTL.
+## 5. Metadata Schema (SQL)
+- Existing `causal_events` table (see details above) includes:
+  - `project_name` for repo scoping.
+  - `logs` for raw diagnostic extraction.
+  - `pattern` for extracted failure/success signatures.
+
+## 6. Intelligence Engine: Semantic Search & Log Diagnostics
+
+### Stemming-Based Semantic Search
+To ensure high recall across varying task descriptions, V1.1 replaced exact Jaccard similarity with a stemming-based **Dice Coefficient** logic using the `natural` library.
+- **Algorithm**: `natural.PorterStemmer` reduces words to their root form. `natural.DiceCoefficient` calculates the degree of similarity between stemmed token sets.
+- **Latency**: Sub-10ms logic ensures no blocking during agent bootstrap. 
+- **Effectiveness**: Allows "Installing deps" to match "Install dependencies" with high confidence scores (>0.8).
+
+### Hybrid Log Analysis (HLD)
+Learning from terminal logs is the core of CausalOS's differentiator. It uses a 2-tier analysis:
+1.  **Heuristic Tier (Regex)**: Scans for 20+ language-specific patterns (Python Tracebacks, Node errors, Go panics, Java Exceptions).
+2.  **Fallback Tier (Heuristic Snippet)**: If a failure occurred (`system_exit_code != 0`) but no regex matched, the system captures a 150-character snippet of the trailing log output as a "proxy pattern."
 
 ---
 

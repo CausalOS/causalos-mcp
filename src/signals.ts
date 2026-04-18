@@ -90,26 +90,62 @@ export function evaluateSignals(signals: SignalsRecord): EvaluationResult {
 
 /**
  * Extracts error patterns from execution logs (stdout/stderr).
+ * Implements a hybrid approach: specific regex heuristics for common language errors +
+ * generic stack-trace detection for unknown failures.
  */
 export function extractErrorPatterns(logs: string | null | undefined): string | null {
   if (!logs) return null;
-  const commonErrors = [
+
+  const patterns = [
+    // Node.js / JavaScript
     /TypeError: .*/i,
     /SyntaxError: .*/i,
     /ReferenceError: .*/i,
     /\[ERR_[A-Z0-9_]+\]/i,
-    /Error: (?!.*success).*/i,
-    /Exception in thread .*/i,
+    /Cannot find module .*/i,
+    /Uncaught .*/i,
+
+    // Python
+    /Traceback \(most recent call last\):/i,
+    /.*Error: .*/i, // generic python error line (e.g. ValueError: ...)
+
+    // Go
     /panic: .*/i,
+    /fatal error: .*/i,
+
+    // Java / C#
+    /Exception in thread ".*" .*/i,
+    /at .*\.java:\d+/i,
+    /at .*\.cs:\d+/i,
+
+    // Systems / CLI
     /Permission denied/i,
     /Command not found/i,
-    /Cannot find module .*/i,
+    /Segmentation fault/i,
+    /Connection refused/i,
+    /Operation timed out/i,
+    /fatal: .*/i, // Git errors
+    /Error: (?!.*success).*/i,
   ];
 
-  const matches = commonErrors
+  const matches = patterns
     .map((re) => logs.match(re))
     .filter((m) => m !== null)
-    .map((m) => m![0]);
+    .map((m) => m![0].trim());
 
-  return matches.length > 0 ? matches.join("; ") : null;
+  if (matches.length > 0) {
+    // Return unique patterns, limited to top 3 for brevity
+    return [...new Set(matches)].slice(0, 3).join("; ");
+  }
+
+  // Fallback: If logs contain "error" or "fail" and we're at the end of the log, 
+  // grab a snippet of the last few lines as a heuristic pattern.
+  if (logs.toLowerCase().includes("error") || logs.toLowerCase().includes("fail")) {
+    const lines = logs.split("\n").filter(l => l.trim().length > 0);
+    const lastLines = lines.slice(-2).join(" ").substring(0, 150);
+    if (lastLines.length > 10) return `[Heuristic] ${lastLines}`;
+  }
+
+  return null;
 }
+

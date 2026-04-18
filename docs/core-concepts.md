@@ -32,12 +32,22 @@ CausalOS doesn't just take the agent's word for success. it uses a weighted sign
 
 The final "Success" or "Failure" label in the database is a derivation of these filtered signals.
 
-## 4. Local-First Memory
+## 5. Semantic Intelligence (Stemming)
 
-All learned patterns are stored in a local SQLite database (`~/.causalos/memory.db`). This ensures:
-- **Zero Latency**: Memory retrieval is instant.
-- **Full Privacy**: Your tasks, code, and failures never leave your machine.
-- **Offline Work**: The learning loop works even without an internet connection.
+CausalOS doesn't rely on exact text matches. It uses a **Porter Stemming** algorithm and **Dice Coefficient** to understand the intent behind a task.
+
+- **Normalization**: "deleting logs" and "deleted log" are both reduced to their root forms ("delet log").
+- **Fuzzy Matching**: This allows the system to surface relevant failures even if the agent describes the task slightly differently each time.
+- **Performance**: The entire matching process is local and executes in <10ms, ensuring no cognitive lag for the agent.
+
+## 6. Global Memory & Origin Tagging
+
+Patterns learned in one project can prevent failures in another. CausalOS implements **Cross-Project Global Memory**:
+
+- **Search**: When you start a task, CausalOS searches across *all* project entries in your local database.
+- **Prioritization**: Local project results are always prioritized, but relevant "Global" patterns are injected if they have high confidence.
+- **Tagging**: Global patterns are clearly tagged in the instruction patch (e.g., `[GLOBAL (repo: user-auth-service)]`). This gives the agent context on where the lesson was learned.
+- **Privacy**: Only the high-level pattern/action/repo-name is shared globally within your machine; deep execution logs remain private to the project they occurred in.
 
 ---
 

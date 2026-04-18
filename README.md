@@ -11,13 +11,13 @@ It actively shapes agent reasoning by injecting structured context (past failure
 
 | Feature | V1.1 (Intelligence Engine) |
 | :--- | :--- |
-| Memory | Active project-aware SQLite |
+| Memory | **Cross-project Global Memory retrieval** |
 | Risk check | Warning + pattern + suggested fix |
-| Context | Project-boosted semantic injection |
-| Learning | Autonomous log-based diagnostics |
+| Context | **Stemmed Semantic matching (Dice Coefficient)** |
+| Learning | **Hybrid heuristic + fallback diagnostics** |
 | Behavior change | `causal_adapt` with project memory |
-| Logic Analyzer | **Extracts error patterns from logs** |
-| Project Intelligence | **Repo-specific memory segmentation** |
+| Logic Analyzer | **Extracts error patterns cross-language** |
+| Memory Tagging | **Global origin repository tagging** |
 
 ---
 

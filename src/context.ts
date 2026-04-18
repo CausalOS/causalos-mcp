@@ -1,3 +1,4 @@
+import natural from "natural";
 import {
   querySimilarFailures,
   querySimilarSuccesses,
@@ -23,30 +24,31 @@ const WEIGHT_RECENCY       = 0.10;  // Recent failures matter more
 
 const RECENCY_HALF_LIFE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-// ─── Task Similarity (keyword Jaccard, no embeddings needed for V1) ───────────
+// ─── Task Similarity (Semantic Boost via Natural Library) ─────────────────────
+/**
+ * Uses Porter Stemming to normalize tokens and Dice Coefficient for comparison.
+ * "delete database" -> "delet databas"
+ * "deleted rows" -> "delet row"
+ */
 export function taskSimilarity(a: string, b: string): number {
-  const tokenize = (s: string) =>
-    new Set(
-      s
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, " ")
-        .split(/\s+/)
-        .filter((w) => w.length > 2)
-    );
+  if (!a || !b) return 0;
+  
+  const stem = (s: string) => 
+    s.toLowerCase()
+     .replace(/[^a-z0-9\s]/g, " ")
+     .split(/\s+/)
+     .filter(w => w.length > 2)
+     .map(w => natural.PorterStemmer.stem(w))
+     .join(" ");
 
-  const setA = tokenize(a);
-  const setB = tokenize(b);
+  const stemmedA = stem(a);
+  const stemmedB = stem(b);
 
-  if (setA.size === 0 || setB.size === 0) return 0;
+  if (!stemmedA || !stemmedB) return 0;
 
-  let intersection = 0;
-  for (const token of setA) {
-    if (setB.has(token)) intersection++;
-  }
-
-  const union = new Set([...setA, ...setB]).size;
-  return intersection / union;
+  return natural.DiceCoefficient(stemmedA, stemmedB);
 }
+
 
 // ─── Recency Score (exponential decay) ────────────────────────────────────────
 function recencyScore(created_at: number): number {
@@ -184,7 +186,8 @@ export function buildContext(task: string, action_type?: string, projectName?: s
     scoredFailures.map(({ ev, score }) => ({ ...ev, score })),
     scoredSuccesses.map(({ ev, reinforcement }) => ({ ...ev, reinforcement })),
     constraints,
-    repeatedFailurePatterns
+    repeatedFailurePatterns,
+    projectName
   );
 
   return {
@@ -218,7 +221,8 @@ function buildDirectiveInstructionPatch(
   failures: Array<CausalEvent & { score: number }>,
   successes: Array<CausalEvent & { reinforcement: number }>,
   constraints: string[],
-  repeatedPatterns: Array<{ task: string; count: number }>
+  repeatedPatterns: Array<{ task: string; count: number }>,
+  currentProject?: string
 ): string {
   if (failures.length === 0 && successes.length === 0) {
     return (
@@ -229,6 +233,12 @@ function buildDirectiveInstructionPatch(
 
   const lines: string[] = [];
 
+  // ── Helper to tag global memory ──
+  const tag = (ev: CausalEvent) =>
+    currentProject && ev.project_name && ev.project_name !== currentProject
+      ? `[GLOBAL (repo: ${ev.project_name})] `
+      : "";
+
   // ── Hard prohibitions first (highest signal) ──
   const userCorrected = failures.filter((f) => {
     const s = parseSignals(f.signals);
@@ -238,7 +248,8 @@ function buildDirectiveInstructionPatch(
   if (userCorrected.length > 0) {
     lines.push("⛔ PROHIBITED (user-corrected failures — do NOT repeat):");
     for (const f of userCorrected.slice(0, 3)) {
-      if (f.pattern) lines.push(`   • "${f.pattern}" — previously corrected by user`);
+      const prefix = tag(f);
+      if (f.pattern) lines.push(`   • ${prefix}"${f.pattern}" — previously corrected by user`);
       if (f.outcome) lines.push(`     Result was: ${f.outcome.substring(0, 120)}`);
     }
   }
@@ -266,7 +277,8 @@ function buildDirectiveInstructionPatch(
       lines.push("\n✅ PROVEN PATTERNS (use these — they work reliably):");
       for (const s of strongSuccesses.slice(0, 3)) {
         if (s.pattern) {
-          lines.push(`   • "${s.pattern}" (confidence: ${(s.reinforcement * 100).toFixed(0)}%)`);
+          const prefix = tag(s);
+          lines.push(`   • ${prefix}"${s.pattern}" (confidence: ${(s.reinforcement * 100).toFixed(0)}%)`);
         }
       }
     }

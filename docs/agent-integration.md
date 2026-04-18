@@ -34,6 +34,13 @@ Include the Decision Intelligence instructions in your `.cursorrules`. This ensu
 ### 3. Stitch / Cascade (`STITCH.md` or `DESIGN.md`)
 Add a section titled `## CausalOS Protocol` to your `STITCH.md`. Cascade agents are trained to look for these files and follow the integrated instructions.
 
+## Interpreting Global Memory
+
+When you call `context_build`, the returned `instruction_patch` may include patterns learned from other projects. These are tagged with `[GLOBAL (repo: name)]`.
+
+- **Trust but Verify**: Global patterns are highly relevant to the *action* you are taking (e.g., "how to properly format a DB delete"), but the specific repo name tells you it occurred in a different environment.
+- **Constraints are Mandatory**: If a Global failure is marked as `⛔ PROHIBITED`, do not attempt it, even if you are in a new project. CausalOS has identified that this action is fundamentally risky or incorrect across your entire workspace.
+
 ---
 
 ## Best Practices
@@ -41,13 +48,16 @@ Add a section titled `## CausalOS Protocol` to your `STITCH.md`. Cascade agents 
 ### 1. Be Specific in `context_build`
 Don't just say `task: "fix script"`. Preferred: `task: "Update user authentication logic in auth.ts to handle OAuth2"`. Better descriptions lead to better semantic matching in memory.
 
-### 2. Don't Skip `causal_record`
+### 2. Identify the Project Scope
+Always pass a `project_name`. This allows CausalOS to **boost** repo-specific memories, ensuring that project-local constraints take precedence over global patterns.
+
+### 3. Don't Skip `causal_record`
 If you skip recording, the system cannot learn. Even if you "fail", recording that failure is what makes the *next* run successful.
 
-### 3. Respond to `risk_score`
+### 4. Respond to `risk_score`
 If `causal_check` returns a high risk score (> 0.7), you should explain the risk to the user and suggest an alternative *before* acting.
 
-### 4. Continuous Log Capture
+### 5. Continuous Log Capture
 Professional integrations should pipe the output of every critical shell command into the `logs` field of `causal_record`. This allows CausalOS to detect:
 - `TypeError` or `SyntaxError` in scripts.
 - `Permission denied` or `Command not found` in environments.
@@ -58,3 +68,4 @@ By capturing raw logs, CausalOS can objectively identify a failure even if the a
 ---
 
 [← Tool Reference](tool-reference.md) | [Architecture →](architecture.md)
+
