@@ -64,6 +64,32 @@ server.registerTool(
   }
 );
 
+// ─── Slack Integration ────────────────────────────────────────────────────────
+async function sendSlackAlert(message: string) {
+  const webhook = process.env.CAUSAL_SLACK_WEBHOOK;
+  if (!webhook) return;
+  try {
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: `🚨 *CausalOS HARD_BLOCK Enforcement* 🚨\n\n${message}`,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `🚨 *CausalOS HARD_BLOCK Enforcement* 🚨\n\n*Action Prevented:* \n\`\`\`${message}\`\`\`\n\n_Governance dashboard updated._`
+            }
+          }
+        ]
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to send Slack alert:", err);
+  }
+}
+
 // ─── Tool 2: causal_check (V2 — Kernel Governance) ───────────────────────────
 server.registerTool(
   "causal_check",
@@ -78,6 +104,10 @@ server.registerTool(
   async ({ action, action_type }) => {
     try {
       const verdict = await kernel.prepareToolCall(action_type, JSON.stringify({ action }));
+
+      if (verdict.action === "HARD_BLOCK" || verdict.action === "BLOCK") {
+        await sendSlackAlert(action);
+      }
 
       return {
         content: [
