@@ -38,9 +38,9 @@ export class KernelClient {
     });
   }
 
-  async recordOutcome(plan_hash: string, success_criteria: string, success: boolean, details: string): Promise<any> {
+  async recordOutcome(plan_hash: string, success_criteria: string, success: boolean, details: string, session_id: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.client.RecordOutcome({ plan_hash, success_criteria, success, details }, (err: any, response: any) => {
+      this.client.RecordOutcome({ plan_hash, success_criteria, success, details, session_id }, (err: any, response: any) => {
         if (err) return reject(err);
         resolve(response);
       });
@@ -48,18 +48,28 @@ export class KernelClient {
   }
 
   // 2. Governance
-  async prepareToolCall(tool_name: string, arguments_json: string): Promise<any> {
+  async prepareToolCall(
+    contract_hash: string,
+    parent_event_hash: string,
+    tool_name: string,
+    arguments_json: string,
+    agent_id: string,
+    session_id: string
+  ): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.client.PrepareToolCall({ tool_name, arguments_json }, (err: any, response: any) => {
-        if (err) return reject(err);
-        resolve(response);
-      });
+      this.client.PrepareToolCall(
+        { contract_hash, parent_event_hash, tool_name, arguments_json, agent_id, session_id },
+        (err: any, response: any) => {
+          if (err) return reject(err);
+          resolve(response);
+        }
+      );
     });
   }
 
-  async commitToolCall(tool_call_id: string, outcome_json: string): Promise<any> {
+  async commitToolCall(tool_call_id: string, outcome_json: string, success: boolean): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.client.CommitToolCall({ tool_call_id, outcome_json }, (err: any, response: any) => {
+      this.client.CommitToolCall({ tool_call_id, outcome_json, success }, (err: any, response: any) => {
         if (err) return reject(err);
         resolve(response);
       });
