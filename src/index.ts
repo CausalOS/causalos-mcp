@@ -11,7 +11,7 @@ const execAsync = promisify(exec);
 // ─── Server ───────────────────────────────────────────────────────────────────
 const server = new McpServer({
   name: "causalos-mcp",
-  version: "2.0.0",
+  version: "2.1.0",
 });
 
 // ─── Tool 1: context_build (V2 — Kernel Evaluation) ───────────────────────────
