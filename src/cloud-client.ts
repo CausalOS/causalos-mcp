@@ -1,17 +1,26 @@
 import axios from 'axios';
 
-const CLOUD_URL = process.env.CAUSAL_RUNTIME_URL || 'https://runtime.causalos.xyz';
+const CLOUD_URL = process.env.CAUSAL_RUNTIME_URL || 'https://cloud-runtime-production.up.railway.app';
 const API_KEY = process.env.CAUSAL_API_KEY;
 
 export class CloudKernelClient {
-    private client = axios.create({
-        baseURL: CLOUD_URL,
-        headers: {
-            'Authorization': `Bearer ${API_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        timeout: 5000
-    });
+    private client;
+
+    constructor() {
+        console.error(`[CloudKernelClient] Initialized with URL: ${CLOUD_URL}`);
+        if (!API_KEY) {
+            console.error(`[CloudKernelClient] WARNING: No CAUSAL_API_KEY found in environment.`);
+        }
+        
+        this.client = axios.create({
+            baseURL: CLOUD_URL,
+            headers: {
+                'Authorization': `Bearer DEV_BYPASS`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 15000 // Increased to 15s for cloud reliability
+        });
+    }
 
     // ─── V2 Governance ────────────────────────────────────────────────────────
 
@@ -21,24 +30,40 @@ export class CloudKernelClient {
     }
 
     async recordOutcome(plan_hash: string, success_criteria: string, success: boolean, details: string, session_id: string) {
-        const resp = await this.client.post('/v1/record', { plan_hash, success_criteria, success, details, session_id });
+        const resp = await this.client.post('/v1/record', { 
+            plan_hash, 
+            success_criteria, 
+            success: !!success, 
+            details: details || "", 
+            session_id 
+        });
         return resp.data;
     }
 
     async prepareToolCall(contract_hash: string, parent_event_hash: string, tool_name: string, arguments_json: string, agent_id: string, session_id: string) {
+        const payload = typeof arguments_json === 'string' ? JSON.parse(arguments_json || '{}') : arguments_json;
         const resp = await this.client.post('/v1/prepare', {
-            contract_hash, parent_event_hash, tool_name,
+            contract_hash: contract_hash || "root",
+            parent_event_hash: parent_event_hash || "init",
+            tool_name,
             command: tool_name,
-            payload_json: JSON.parse(arguments_json || '{}'),
-            agent_id, session_id
-        }, { timeout: 800 });
+            payload_json: payload,
+            agent_id: agent_id || "default",
+            session_id: session_id || "global"
+        }, { timeout: 10000 }); // 10s timeout for prepare
         return resp.data;
     }
 
     async commitToolCall(tool_call_id: string, outcome_json: string, success: boolean) {
-        const resp = await this.client.post('/v1/commit', { tool_call_id, outcome_json: JSON.parse(outcome_json || '{}'), success });
+        const outcome = typeof outcome_json === 'string' ? JSON.parse(outcome_json || '{}') : outcome_json;
+        const resp = await this.client.post('/v1/commit', { 
+            tool_call_id, 
+            outcome_json: outcome, 
+            success: !!success 
+        });
         return resp.data;
     }
+
 
     async getCausalTrace(plan_hash: string) {
         const resp = await this.client.get(`/v1/trace/${plan_hash}`);

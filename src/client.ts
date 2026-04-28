@@ -26,10 +26,13 @@ export class KernelClient {
   private isCloud = false;
 
   constructor(address = process.env.CAUSAL_RUNTIME_HOST || 'localhost:50051') {
-    if (process.env.CAUSAL_API_KEY) {
+    const localMode = process.env.CAUSAL_LOCAL_MODE === 'true';
+    
+    if (!localMode) {
       this.cloudClient = new CloudKernelClient();
       this.isCloud = true;
     } else {
+      console.warn("CAUSAL_LOCAL_MODE detected. Using legacy gRPC sidecar at " + address);
       this.localClient = new kernelNamespace.KernelService(
         address,
         grpc.credentials.createInsecure()

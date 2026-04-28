@@ -585,9 +585,17 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   const host = process.env.CAUSAL_RUNTIME_HOST || 'localhost:50051';
-  const mode = process.env.CAUSAL_API_KEY ? 'CLOUD' : 'LOCAL';
-  console.error(`CausalOS MCP v3.0 running — ${mode} mode | Kernel: ${host}`);
-  console.error(`Tools: context_build | causal_check | causal_record | causal_execute`);
+  const localMode = process.env.CAUSAL_LOCAL_MODE === 'true';
+  const mode = localMode ? 'LOCAL (Legacy)' : 'CLOUD (Production)';
+  
+  console.error(`CausalOS MCP v3.0 running — ${mode}`);
+  if (localMode) {
+    console.error(`Kernel gRPC: ${host}`);
+  } else {
+    console.error(`Runtime URL: ${process.env.CAUSAL_RUNTIME_URL || 'https://runtime.causalos.xyz'}`);
+  }
+  
+  console.error(`Tools: context_build | causal_check | causal_record | causalos_execute`);
   console.error(`       memory_store | memory_query | causal_graph_add`);
   console.error(`       causal_simulate | causal_backtrack | causal_history`);
 }
