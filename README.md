@@ -1,39 +1,35 @@
-# CausalOS v2.0: Deterministic Governance Layer
+# CausalOS v1: Cloud-Native Deterministic Governance
 
-> **"Don't just anticipate the future. Govern it."**
+> **"Govern the future from the edge."**
 
-CausalOS V2 is a high-integrity **Deterministic Governance Layer** for AI agents. It transitions from a simple memory store to a **Split-Plane Architecture**, enforcing safety guardrails and closed-loop learning across every agent trajectory.
-
----
-
-## 🚀 The V2 Split-Plane Architecture
-
-V2 introduces a clear separation between implementation and governance:
-
-1.  **Control Plane (The Kernel)**: A high-performance Rust sidecar that manages the **Causal Ledger (Binary DAG)** and enforces **Plan Contracts**.
-2.  **Data Plane (The Bridge)**: A lightweight Node.js/gRPC bridge that interfaces with any MCP-capable host (Claude Desktop, IDEs, etc.).
+CausalOS v1 is the production-grade **Deterministic Governance Layer** for AI agents. It transitions the project to a **Cloud-First Architecture**, providing high-integrity safety guardrails and institutional causal memory without the overhead of local Rust kernels.
 
 ---
 
-## ✨ Key Features in V2
+## 🚀 Cloud-Native Architecture
 
-- **2-Phase Commit (2PC) Protocol**: Mandatory `Prepare -> Simulate -> Commit` loop for all critical tools.
-- **Binary Causal Ledger**: High-speed, cryptographically linked trajectory storage.
-- **Plan Contracts**: Deterministic safety requirements injected into agent context via `contract_hash`.
-- **Hard Safety Gates**: Physical blocking of high-risk tool calls with historical failure density > 0.8.
-- **Institutional Observability**: OpenTelemetry integration for tracing governance decisions.
+v1 centralizes governance in the **Causal Cloud**, while keeping the data plane local:
+
+1.  **Control Plane (Causal Cloud)**: A high-performance Rust runtime hosted at `mcp.causalos.xyz` that manages the **Global Causal Ledger** and enforces **Plan Contracts**.
+2.  **Data Plane (The Bridge)**: A lightweight Node.js client installed via `npm` that redacts secrets and interfaces with the Cloud Runtime via secure HTTPS.
 
 ---
 
-## ☁️ CausalOS Cloud (Recommended)
+## ✨ Key Features in v1
 
-Move the governance kernel to the cloud. No local Rust dependencies required.
+- **Cloud-First Governance**: Instant setup with `npm install causalos`. No local sidecars or compilation required.
+- **Privacy Sanitizer**: Mandatory local redaction of secrets, PII, and API keys before any data leaves your environment.
+- **Plan Contracts**: Deterministic safety requirements and instruction patches injected into agent context via `context_build`.
+- **Hard Safety Gates**: Real-time blocking of high-risk tool calls based on global failure densities.
+- **Institutional Memory**: Share failure patterns across your entire team to prevent redundant errors.
 
-### 1. Get an API Key
-Sign up at [causalos.xyz](https://causalos.xyz) and generate an API key.
+---
 
-### 2. Update Configuration
-Add your API key to the environment variables:
+## ⚡ Quickstart
+
+### 1. Configure the MCP Bridge
+Add the following to your `claude_desktop_config.json` (or equivalent):
+
 ```json
 {
   "mcpServers": {
@@ -41,62 +37,42 @@ Add your API key to the environment variables:
       "command": "npx",
       "args": ["-y", "causalos"],
       "env": {
-        "CAUSAL_API_KEY": "sk-your-key-here"
+        "CAUSAL_RUNTIME_URL": "https://cloud-runtime-production.up.railway.app",
+        "CAUSAL_API_KEY": "sk-your-api-key-from-causalos-xyz"
       }
     }
   }
 }
 ```
 
-## 🛠 Local Setup (Advanced)
-
-### 1. Launch the Runtime Kernel
-The Rust Kernel must be active for the MCP bridge to function.
-```bash
-cd runtime/sidecar
-cargo run --release
-```
-*The Kernel listens on gRPC port 50051.*
-
-### 2. Configure the MCP Bridge
-Update your `claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "causalos": {
-      "command": "npx",
-      "args": ["-y", "causalos"],
-      "env": {
-        "CAUSAL_RUNTIME_HOST": "localhost:50051"
-      }
-    }
-  }
-}
-```
+### 2. Get an API Key
+Visit the dashboard at [mcp.causalos.xyz](https://mcp.causalos.xyz) to generate your `CAUSAL_API_KEY`.
 
 ---
 
-## 🧠 The V2 Golden System Prompt
+## 🧠 The v1 System Prompt
 
-To enable the V2 learning loop, add this to your agent's system prompt:
+To enable the governance loop, add this to your agent's system prompt:
 
 ```markdown
 ### Deterministic Governance Protocol (CausalOS)
 
-You are equipped with a CausalOS Governance Layer. You MUST follow this 2nd-Phase Commit (2PC) protocol:
+You are equipped with a CausalOS Governance Layer. You MUST follow this high-integrity protocol:
 
-1. **Contract Signing (`context_build`)**: Call this before ANY task to receive your `contract_hash` and `Required Invariants`.
-2. **Pre-Execution Check (`causal_check`)**: Call this before any tool with side effects. Strictly follow the Kernel's `verdict` (ALLOW/BLOCK).
-3. **Loop Closure (`causal_record`)**: Call this after execution with the `contract_hash`. Provide exit codes and outcome summaries.
+1. **Contract Signing (`context_build`)**: Call this before ANY task to receive your `contract_hash` and `instruction_patch`.
+2. **Execution Broker (`causalos_execute`)**: Use this tool for ALL actions with side effects (Shell, Write, Delete).
+3. **Loop Closure (`causal_record`)**: Call this after significant events to update the Causal Ledger in the cloud.
 ```
 
 ---
 
-## 📄 Privacy, Performance & Failsafes
-- ✅ **Hybrid Connectivity**: Automatically falls back to local sidecar if `CAUSAL_API_KEY` is missing.
-- ✅ **Cloud Failsafe**: In Cloud mode, tool checks have a strict **200ms timeout**. If the cloud is unreachable, the call is `SOFT_ALLOW`-ed and logged locally to prevent agent hang.
-- ✅ **Ultra Low Latency**: <50ms cloud round-trip including DB resolution.
-- ✅ **Zero Hallucination**: Outcome hashes ensure memory integrity.
+## 🛡️ Privacy & Performance
+
+- ✅ **Privacy First**: The local bridge redacts all sensitive data before it hits the network.
+- ✅ **Ultra Low Latency**: <12ms total overhead via edge-optimized routing.
+- ✅ **Institutional Safety**: One agent's failure becomes every agent's protection.
+- ✅ **Zero Hallucination**: Outcome hashes ensure total memory integrity.
 
 ---
-[Full Documentation](https://docs.causalos.com) | [Core Concepts](docs/essentials/core-concepts.mdx) | [Architecture](docs/essentials/architecture.mdx)
+
+[Full Documentation](https://docs.causalos.com) | [Core Concepts](https://docs.causalos.com/essentials/core-concepts) | [Architecture](https://docs.causalos.com/essentials/architecture)
