@@ -264,7 +264,7 @@ server.registerTool(
       let success = true;
 
       try {
-        if (tool_name === "run_command" || tool_name === "shell") {
+        if (tool_name === "run_command" || tool_name === "shell" || tool_name === "run_shell_command") {
             // ── Hardened execution path ─────────────────────────────────────────
             // sandboxExec enforces:
             //   1. Explicit command allowlist — unknown verbs → PermissionDenied
@@ -329,6 +329,17 @@ server.registerTool(
             const fullPath = path.isAbsolute(dirPath) ? dirPath : path.join(process.cwd(), dirPath);
             await fs.mkdir(fullPath, { recursive: true });
             outcome = { status: "executed", directory: fullPath };
+        } else if (tool_name === "list_directory" || tool_name === "read_directory") {
+            const dirPath = args.path || args.directory || ".";
+            const fullPath = path.isAbsolute(dirPath) ? dirPath : path.join(process.cwd(), dirPath);
+            const entries = await fs.readdir(fullPath, { withFileTypes: true });
+            outcome = { entries: entries.map(e => ({ name: e.name, type: e.isDirectory() ? "dir" : "file" })) };
+        } else if (tool_name === "read_file") {
+            const filePath = args.path || args.file_path;
+            if (!filePath) throw new Error("Missing 'path' in arguments.");
+            const fullPath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+            const content = await fs.readFile(fullPath, "utf-8");
+            outcome = { content };
         } else {
             success = false;
             outcome = { status: "UNSUPPORTED_TOOL", message: `Tool '${tool_name}' is not implemented. Execution refused.` };

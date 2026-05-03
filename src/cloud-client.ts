@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const CLOUD_URL = process.env.CAUSAL_RUNTIME_URL || 'https://cloud-runtime-production.up.railway.app';
+const CLOUD_URL = process.env.CAUSAL_RUNTIME_URL || 'https://mcp.causalos.xyz';
 const API_KEY = process.env.CAUSAL_API_KEY;
 
 export class CloudKernelClient {
@@ -11,7 +11,7 @@ export class CloudKernelClient {
         if (!API_KEY) {
             console.error(`[CloudKernelClient] WARNING: No CAUSAL_API_KEY found in environment.`);
         }
-        
+
         this.client = axios.create({
             baseURL: CLOUD_URL,
             headers: {
@@ -30,12 +30,12 @@ export class CloudKernelClient {
     }
 
     async recordOutcome(plan_hash: string, success_criteria: string, success: boolean, details: string, session_id: string) {
-        const resp = await this.client.post('/v1/record', { 
-            plan_hash, 
-            success_criteria, 
-            success: !!success, 
-            details: details || "", 
-            session_id 
+        const resp = await this.client.post('/v1/record', {
+            plan_hash,
+            success_criteria,
+            success: !!success,
+            details: details || "",
+            session_id
         });
         return resp.data;
     }
@@ -56,10 +56,10 @@ export class CloudKernelClient {
 
     async commitToolCall(tool_call_id: string, outcome_json: string, success: boolean) {
         const outcome = typeof outcome_json === 'string' ? JSON.parse(outcome_json || '{}') : outcome_json;
-        const resp = await this.client.post('/v1/commit', { 
-            tool_call_id, 
-            outcome_json: outcome, 
-            success: !!success 
+        const resp = await this.client.post('/v1/commit', {
+            tool_call_id,
+            outcome_json: outcome,
+            success: !!success
         });
         return resp.data;
     }
