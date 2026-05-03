@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 // NOTE: raw exec/execAsync is intentionally removed from this module.
@@ -160,7 +160,11 @@ server.registerTool(
   withFailureTracking(async ({ action, action_type, contract_hash, parent_event_hash, session_id, strict_mode }: any) => {
     try {
       // 1. Local Heuristic Safety Check (Raw Data)
-      const isSensitive = action.toLowerCase().includes("rm -rf") || action.toLowerCase().includes("drop table") || action.toLowerCase().includes("delete");
+      const sensitivePatterns = ["rm -rf", "drop table", "delete", "chmod", "> /dev/", "mkfs"];
+      const isSensitivePattern = sensitivePatterns.some(p => action.toLowerCase().includes(p));
+      const sensitiveTools = ["run_command", "shell", "run_shell_command", "write_file", "write_to_file", "create_file", "delete_file"];
+      const isSensitiveTool = sensitiveTools.includes(action_type);
+      const isSensitive = isSensitivePattern || isSensitiveTool;
       
       // 2. Check Local Governance Engine (Zero Latency)
       const fingerprint = Sanitizer.getFingerprint(action_type, { action });
@@ -229,7 +233,18 @@ server.registerTool(
       // 0. LOCAL GOVERNANCE CHECK (Zero Latency)
       const fingerprint = Sanitizer.getFingerprint(tool_name, args);
       const localVerdict = govManager.checkAction(fingerprint);
+
+      const sensitiveTools = ["run_command", "shell", "run_shell_command", "write_file", "write_to_file", "create_file", "delete_file"];
+      const isSensitiveTool = sensitiveTools.includes(tool_name);
       
+      if (!localVerdict && isSensitiveTool) {
+        console.error(`[CausalOS] FAIL_CLOSED: Zero history for sensitive tool ${tool_name}`);
+        return {
+          content: [{ type: "text", text: `CausalOS BLOCK: Zero history for sensitive tool '${tool_name}'. Execution denied by default (Safety-by-Default).` }],
+          isError: true
+        };
+      }
+
       if (localVerdict && (localVerdict.recommendation === "ABORT" || (localVerdict as any).verdict === "BLOCK")) {
         console.error(`[CausalOS] HARD_BLOCK: Local match prevents execution of ${tool_name}`);
         await sendSlackAlert(`Prevented execution of ${tool_name} due to LOCAL_BLOCK: ${localVerdict.reason}`);

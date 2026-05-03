@@ -265,7 +265,9 @@ const BLOCKED_INTERPRETERS = new Set([
 // invoke a shell, so they would fail at runtime anyway — but we reject early
 // to prevent confusion and future regressions).
 
-const SHELL_METACHAR_RE = /[;&|`$()<>\\{}\n]/;
+const SHELL_METACHAR_RE = process.platform === "win32"
+  ? /[;&|`$()<>^{}\n]/  // Backslash allowed on Windows, added Caret (^) as it is a metachar
+  : /[;&|`$()<>\\{}\n]/;
 
 // ── Base64 / URL-encoding detector ───────────────────────────────────────────
 
@@ -474,6 +476,7 @@ export async function sandboxExec(rawCommand: string, timeoutMs = 30_000): Promi
       timeout: timeoutMs,
       maxBuffer: 10 * 1024 * 1024, // 10 MB max output
       windowsHide: true,
+      shell: process.platform === "win32", // Enable shell on Windows to resolve .cmd/.bat
     });
     return { allowed: true, stdout, stderr, exit_code: 0 };
   } catch (err: any) {
