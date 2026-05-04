@@ -162,7 +162,7 @@ server.registerTool(
       // 1. Local Heuristic Safety Check (Raw Data)
       const sensitivePatterns = [
         "rm -rf", "drop table", "delete ", "chmod", "> /dev/", "mkfs",
-        "sudo ", "./", "/*", "eval ", "curl", "wget", "systemctl", "service ",
+        "sudo ", "eval ", "curl", "wget", "systemctl", "service ",
         "passwd", "shadow", "kill -9", "pkill", "dd if=", "nc -e", "bash -i"
       ];
       const isSensitivePattern = sensitivePatterns.some(p => action.toLowerCase().includes(p));
@@ -240,8 +240,13 @@ server.registerTool(
 
       const sensitiveTools = ["run_command", "shell", "run_shell_command", "write_file", "write_to_file", "create_file", "delete_file"];
       const isSensitiveTool = sensitiveTools.includes(tool_name);
+
+      const rawCommand: string = typeof args === "string" ? args : (args?.command ?? "");
+      const safeShellCommands = ["rg --files", "ls", "pwd", "git status", "git diff --stat"];
+      const isSafeShellCommand = (tool_name === "run_shell_command" || tool_name === "shell") && 
+                                 safeShellCommands.some(cmd => rawCommand.trim().startsWith(cmd));
       
-      if (!localVerdict && isSensitiveTool) {
+      if (!localVerdict && isSensitiveTool && !isSafeShellCommand) {
         console.error(`[CausalOS] FAIL_CLOSED: Zero history for sensitive tool ${tool_name}`);
         return {
           content: [{ type: "text", text: `CausalOS BLOCK: Zero history for sensitive tool '${tool_name}'. Execution denied by default (Safety-by-Default).` }],
