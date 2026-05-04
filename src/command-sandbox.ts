@@ -467,6 +467,15 @@ export function validateCommand(rawCommand: string): SandboxDenial | null {
 
 // ── Public execution entry point ──────────────────────────────────────────────
 
+function resolveWindowsVerb(verb: string): string {
+  if (process.platform !== "win32") return verb;
+  const batchCommands = ["npm", "npx", "yarn", "pnpm", "tsc", "cargo"];
+  if (batchCommands.includes(verb.toLowerCase())) {
+    return `${verb}.cmd`;
+  }
+  return verb;
+}
+
 /**
  * Execute a shell command through the sandbox.
  *
@@ -476,14 +485,6 @@ export function validateCommand(rawCommand: string): SandboxDenial | null {
  * validation layer above.
  */
 export async function sandboxExec(rawCommand: string, timeoutMs = 30_000): Promise<SandboxOutcome> {
-  if (process.platform === "win32") {
-    return {
-      allowed: false,
-      reason: "Windows shell execution is disabled in this release. Use dedicated file/search/build tools instead.",
-      blocked_by: "NOT_IN_ALLOWLIST",
-    };
-  }
-
   // Validate first
   const denial = validateCommand(rawCommand);
   if (denial) return denial;
@@ -491,7 +492,8 @@ export async function sandboxExec(rawCommand: string, timeoutMs = 30_000): Promi
   // Parse tokens for execFile
   const tokens = tokenize(rawCommand.trim());
   // tokens[0] is guaranteed non-empty here because validateCommand passed above
-  const verb = extractVerb(tokens[0] as string);
+  const rawVerb = extractVerb(tokens[0] as string);
+  const verb = resolveWindowsVerb(rawVerb);
   const args = tokens.slice(1);
 
   try {

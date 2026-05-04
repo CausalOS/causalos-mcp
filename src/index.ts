@@ -822,6 +822,16 @@ server.registerTool(
 // ─── Main ────────────────────────────────────────────────────────────────────
 async function main() {
   const transport = new StdioServerTransport();
+
+  // Lifecycle Management: Graceful Shutdown
+  const shutdown = (signal: string) => {
+    logJson("info", "mcp_shutdown", { signal, message: "Graceful shutdown initiated." });
+    setTimeout(() => process.exit(0), 100);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
   await server.connect(transport);
   const runtimeUrl = process.env.CAUSAL_RUNTIME_URL || 'https://mcp.causalos.xyz/';
   
