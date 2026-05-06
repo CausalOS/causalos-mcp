@@ -7,17 +7,22 @@ const TEST_MODE = process.env.NODE_ENV === "test" || process.env.VITEST === "tru
 
 export class CloudKernelClient {
     private client;
+    private _keyMissing: boolean;
 
     constructor() {
         console.error(`[CloudKernelClient] Initialized with URL: ${CLOUD_URL}`);
+        this._keyMissing = false;
+
         if (!API_KEY) {
             if (TEST_MODE) {
                 console.error(`[CloudKernelClient] Test mode without API key. Using unauthenticated test client.`);
-            } else
-            if (DEV_MODE) {
+            } else if (DEV_MODE) {
                 console.error(`[CloudKernelClient] Dev mode enabled without API key. Cloud calls will fail closed.`);
             } else {
-                throw new Error("CAUSAL_API_KEY is required. Set CAUSAL_DEV_MODE=1 only for explicit local development.");
+                // Defer the error to actual HTTP calls — this lets --version and other
+                // pre-flight paths work without an API key being present.
+                this._keyMissing = true;
+                console.error(`[CloudKernelClient] WARNING: No CAUSAL_API_KEY found in environment.`);
             }
         }
 
@@ -27,18 +32,30 @@ export class CloudKernelClient {
                 ...(API_KEY ? { 'Authorization': `Bearer ${API_KEY}` } : {}),
                 'Content-Type': 'application/json'
             },
-            timeout: 15000 // Increased to 15s for cloud reliability
+            timeout: 15000
         });
+    }
+
+    /** Throws a clear error at call time if the API key was not set at startup. */
+    private requireKey(): void {
+        if (this._keyMissing) {
+            throw new Error(
+                "CAUSAL_API_KEY is required to use CausalOS cloud features. " +
+                "Get your key at https://causalos.xyz or set CAUSAL_DEV_MODE=1 for local development."
+            );
+        }
     }
 
     // ─── V2 Governance ────────────────────────────────────────────────────────
 
     async evaluatePlan(agent_id: string, project_id: string, plan_text: string) {
+        this.requireKey();
         const resp = await this.client.post('/v1/evaluate', { agent_id, project_id, plan_text });
         return resp.data;
     }
 
     async recordOutcome(plan_hash: string, success_criteria: string, success: boolean, details: string, session_id: string) {
+        this.requireKey();
         const resp = await this.client.post('/v1/record', {
             plan_hash,
             success_criteria,
@@ -50,6 +67,7 @@ export class CloudKernelClient {
     }
 
     async prepareToolCall(contract_hash: string, parent_event_hash: string, tool_name: string, arguments_json: string, agent_id: string, session_id: string) {
+        this.requireKey();
         const payload = typeof arguments_json === 'string' ? JSON.parse(arguments_json || '{}') : arguments_json;
         const resp = await this.client.post('/v1/prepare', {
             contract_hash: contract_hash || "root",
@@ -59,11 +77,12 @@ export class CloudKernelClient {
             payload_json: payload,
             agent_id: agent_id || "default",
             session_id: session_id || "global"
-        }, { timeout: 10000 }); // 10s timeout for prepare
+        }, { timeout: 10000 });
         return resp.data;
     }
 
     async commitToolCall(tool_call_id: string, outcome_json: string, success: boolean) {
+        this.requireKey();
         const outcome = typeof outcome_json === 'string' ? JSON.parse(outcome_json || '{}') : outcome_json;
         const resp = await this.client.post('/v1/commit', {
             tool_call_id,
@@ -75,6 +94,7 @@ export class CloudKernelClient {
 
 
     async getCausalTrace(plan_hash: string) {
+        this.requireKey();
         const resp = await this.client.get(`/v1/trace/${plan_hash}`);
         return resp.data;
     }

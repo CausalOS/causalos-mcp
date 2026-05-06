@@ -1,4 +1,32 @@
 #!/usr/bin/env node
+
+// ─── Fast-path: --version / --help ────────────────────────────────────────────
+// Handled before any cloud client initialization to avoid requiring CAUSAL_API_KEY
+// for basic CLI invocations.
+{
+  const arg = process.argv[2];
+  if (arg === '--version' || arg === '-v') {
+    const pkg = await import('../package.json', { with: { type: 'json' } }).catch(() => ({ default: { version: '0.1.5' } }));
+    console.log(`causalos v${pkg.default.version}`);
+    process.exit(0);
+  }
+  if (arg === '--help' || arg === '-h') {
+    console.log(`causalos — CausalOS MCP Server
+
+Usage:
+  causalos [--version] [--help]
+  causalos                      Start the MCP server (requires CAUSAL_API_KEY)
+
+Environment variables:
+  CAUSAL_API_KEY                Your CausalOS API key (https://causalos.xyz)
+  CAUSAL_RUNTIME_URL            Override cloud runtime URL (default: https://mcp.causalos.xyz)
+  CAUSAL_DEV_MODE=1             Run in dev mode without an API key (cloud calls fail closed)
+  CAUSAL_ENV=production         Set governance environment (default: development)
+`);
+    process.exit(0);
+  }
+}
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
