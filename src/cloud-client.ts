@@ -1,244 +1,75 @@
 import axios from 'axios';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 
-const CLOUD_URL = process.env.CAUSAL_RUNTIME_URL || 'https://mcp.causalos.xyz';
-const API_KEY = process.env.CAUSAL_API_KEY;
-const DEV_MODE = process.env.CAUSAL_DEV_MODE === "1";
-const TEST_MODE = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+const CLOUD_URL = process.env.CAUSALOS_API_URL || 'https://mcp.causalos.xyz';
 
 export class CloudKernelClient {
     private client;
-    private _keyMissing: boolean;
+    private deviceId: string | null = null;
 
     constructor() {
-        console.error(`[CloudKernelClient] Initialized with URL: ${CLOUD_URL}`);
-        this._keyMissing = false;
-
-        if (!API_KEY) {
-            if (TEST_MODE) {
-                console.error(`[CloudKernelClient] Test mode without API key. Using unauthenticated test client.`);
-            } else if (DEV_MODE) {
-                console.error(`[CloudKernelClient] Dev mode enabled without API key. Cloud calls will fail closed.`);
-            } else {
-                // Defer the error to actual HTTP calls — this lets --version and other
-                // pre-flight paths work without an API key being present.
-                this._keyMissing = true;
-                console.error(`[CloudKernelClient] WARNING: No CAUSAL_API_KEY found in environment.`);
-            }
-        }
-
         this.client = axios.create({
             baseURL: CLOUD_URL,
             headers: {
-                ...(API_KEY ? { 'Authorization': `Bearer ${API_KEY}` } : {}),
                 'Content-Type': 'application/json'
             },
-            timeout: 15000
+            timeout: 10000
         });
     }
 
-    /** Throws a clear error at call time if the API key was not set at startup. */
-    private requireKey(): void {
-        if (this._keyMissing) {
-            throw new Error(
-                "CAUSAL_API_KEY is required to use CausalOS cloud features. " +
-                "Get your key at https://causalos.xyz or set CAUSAL_DEV_MODE=1 for local development."
-            );
+    async getDeviceId(): Promise<string> {
+        if (this.deviceId) return this.deviceId;
+
+        // Try environment variable first
+        if (process.env.CAUSALOS_DEVICE_ID) {
+            this.deviceId = process.env.CAUSALOS_DEVICE_ID;
+            return this.deviceId;
         }
+
+        // Try local config file
+        const configPath = path.join(os.homedir(), '.causalos', 'config.json');
+        try {
+            const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+            if (config.device_id) {
+                this.deviceId = config.device_id as string;
+                return this.deviceId;
+            }
+        } catch (e) {
+            // Config doesn't exist
+        }
+
+        throw new Error("CAUSALOS_DEVICE_ID not found. Run 'npx causalos init' first.");
     }
 
-    // ─── V2 Governance ────────────────────────────────────────────────────────
-
-    async evaluatePlan(agent_id: string, project_id: string, plan_text: string) {
-        this.requireKey();
-        const resp = await this.client.post('/v1/evaluate', { agent_id, project_id, plan_text });
-        return resp.data;
-    }
-
-    async recordOutcome(plan_hash: string, success_criteria: string, success: boolean, details: string, session_id: string) {
-        this.requireKey();
-        const resp = await this.client.post('/v1/record', {
-            plan_hash,
-            success_criteria,
-            success: !!success,
-            details: details || "",
-            session_id
+    async prepareToolCall(session_id: string, tool_name: string, payload: any) {
+        const deviceId = await this.getDeviceId();
+        const resp = await this.client.post('/v1/governance/prepare', {
+            session_id,
+            tool_name,
+            payload_json: payload,
+        }, {
+            headers: { 'x-causalos-device-id': deviceId as string }
         });
         return resp.data;
     }
 
-    async prepareToolCall(contract_hash: string, parent_event_hash: string, tool_name: string, arguments_json: string, agent_id: string, session_id: string) {
-        this.requireKey();
-        const payload = typeof arguments_json === 'string' ? JSON.parse(arguments_json || '{}') : arguments_json;
-        const resp = await this.client.post('/v1/prepare', {
-            contract_hash: contract_hash || "root",
-            parent_event_hash: parent_event_hash || "init",
-            tool_name,
-            command: tool_name,
-            payload_json: payload,
-            agent_id: agent_id || "default",
-            session_id: session_id || "global"
-        }, { timeout: 10000 });
-        return resp.data;
-    }
-
-    async commitToolCall(tool_call_id: string, outcome_json: string, success: boolean) {
-        this.requireKey();
-        const outcome = typeof outcome_json === 'string' ? JSON.parse(outcome_json || '{}') : outcome_json;
-        const resp = await this.client.post('/v1/commit', {
+    async commitToolCall(tool_call_id: string, outcome: any, success: boolean, exitCode?: number) {
+        const deviceId = await this.getDeviceId();
+        const resp = await this.client.post('/v1/governance/commit', {
             tool_call_id,
             outcome_json: outcome,
-            success: !!success
+            success,
+            exit_code: exitCode
+        }, {
+            headers: { 'x-causalos-device-id': deviceId as string }
         });
         return resp.data;
     }
 
-
-    async getCausalTrace(plan_hash: string) {
-        this.requireKey();
-        const resp = await this.client.get(`/v1/trace/${plan_hash}`);
-        return resp.data;
-    }
-
-    // ─── V3 Causal Graph ──────────────────────────────────────────────────────
-
-    async createCausalNode(params: {
-        session_id: string;
-        agent_id?: string;
-        project_id?: string;
-        label: string;
-        node_type: 'event' | 'state' | 'action' | 'outcome' | 'observation';
-        payload?: Record<string, unknown>;
-        parent_node_id?: string;
-        confidence?: number;
-    }) {
-        this.requireKey();
-        const resp = await this.client.post('/v1/graph/node', params);
-        return resp.data;
-    }
-
-    async createCausalEdge(params: {
-        from_node_id: string;
-        to_node_id: string;
-        relation_type: 'caused' | 'led_to' | 'depends_on' | 'prevented' | 'enabled' | 'correlated';
-        initial_weight?: number;
-        explanation?: string;
-    }) {
-        this.requireKey();
-        const resp = await this.client.post('/v1/graph/edge', params);
-        return resp.data;
-    }
-
-    async getSessionGraph(session_id: string) {
-        this.requireKey();
-        const resp = await this.client.get(`/v1/graph/session/${session_id}`);
-        return resp.data;
-    }
-
-    async backtrack(node_id: string, max_depth?: number, min_weight?: number) {
-        this.requireKey();
-        const params = new URLSearchParams();
-        if (max_depth !== undefined) params.set('max_depth', String(max_depth));
-        if (min_weight !== undefined) params.set('min_weight', String(min_weight));
-        const resp = await this.client.get(`/v1/graph/backtrack/${node_id}?${params}`);
-        return resp.data;
-    }
-
-    // ─── V3 Forward Simulation ────────────────────────────────────────────────
-
-    async simulateForward(params: {
-        session_id: string;
-        proposed_action: string;
-        action_type: string;
-        context_node_id?: string;
-    }) {
-        this.requireKey();
-        const resp = await this.client.post('/v1/simulate', params);
-        return resp.data;
-    }
-
-    // ─── V3 General Memory ────────────────────────────────────────────────────
-
-    async storeMemory(params: {
-        session_id?: string;
-        project_id?: string;
-        agent_id?: string;
-        memory_key: string;
-        memory_value: string;
-        tags?: string[];
-        importance?: number;
-        ttl_seconds?: number;
-    }) {
-        this.requireKey();
-        const resp = await this.client.post('/v1/memory', params);
-        return resp.data;
-    }
-
-    async queryMemory(params: {
-        agent_id?: string;
-        session_id?: string;
-        project_id?: string;
-        tags?: string[];
-        search?: string;
-        limit?: number;
-    }) {
-        this.requireKey();
-        const resp = await this.client.post('/v1/memory/query', params);
-        return resp.data;
-    }
-
-    async deleteMemory(key: string, agent_id?: string) {
-        this.requireKey();
-        const resp = await this.client.delete(`/v1/memory/${encodeURIComponent(key)}`, {
-            params: { agent_id }
-        });
-        return resp.data;
-    }
-
-    async logSystemFailure(params: {
-        session_id: string;
-        agent_id?: string;
-        project_id?: string;
-        label: string;
-        error_message: string;
-        context?: Record<string, unknown>;
-    }) {
-        // 1. Create causal graph node for lineage tracking
-        const node = await this.createCausalNode({
-            session_id: params.session_id,
-            agent_id: params.agent_id,
-            project_id: params.project_id,
-            label: `FAILURE: ${params.label}`,
-            node_type: 'outcome',
-            payload: {
-                error: params.error_message,
-                ...params.context,
-                timestamp: new Date().toISOString()
-            },
-            confidence: 1.0
-        });
-
-        // 2. Also commit the failure outcome to the ledger so it gets embedded into
-        //    failure_signatures via commit_handler. This enables semantic recall:
-        //    future similar actions will be blocked by the CAUSAL_MEMORY_BLOCK path.
-        //    We use the node's id as the anchor for the commit.
-        try {
-            this.requireKey();
-            await this.client.post('/v1/commit', {
-                tool_call_id: node.id,
-                outcome: `AGENT_FAILURE: ${params.label}. Error: ${params.error_message}`.slice(0, 500),
-                success: false,
-                exit_code: 1,
-            });
-        } catch (e) {
-            // Non-fatal — the causal node was already written
-            console.error('[logSystemFailure] commit for failure_signatures failed:', e);
-        }
-
-        return node;
-    }
-
-    async getGovernanceSnapshot() {
-        const resp = await this.client.get('/v1/sync');
+    async getMetrics() {
+        const resp = await this.client.get('/metrics');
         return resp.data;
     }
 }

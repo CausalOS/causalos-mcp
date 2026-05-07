@@ -1,6 +1,6 @@
 {
   "name": "causalos",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Dual Memory Agent Runtime: Causal Graph Engine + General Memory + Forward Simulation + Backward Inference for AI Agents",
   "main": "dist/index.js",
   "bin": {
@@ -8,7 +8,6 @@
   },
   "type": "module",
   "scripts": {
-    
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
@@ -41,8 +40,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.15.2",
     "lru-cache": "^11.3.5",
+    "uuid": "^14.0.0",
     "zod": "^4.3.6"
   }
 }

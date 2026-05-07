@@ -1,36 +1,29 @@
-# CausalOS MCP Bridge
+# Termyte (CausalOS) — Terminal Governance for Coding Agents
 
-Node MCP bridge for CausalOS cloud-runtime governance and memory APIs.
+Termyte is a lightweight, terminal-first governance runtime designed to protect your codebase from catastrophic agent actions (like `rm -rf /` or accidental database drops).
 
-## What it provides
+It provides a secure "Split-Plane" architecture where your coding agent (Claude Code, Cursor, etc.) proposes actions, and Termyte evaluates them against a deterministic sandbox and an LLM judge before execution.
 
-- Tool registration for:
-  - `context_build`
-  - `causal_check`
-  - `causalos_execute`
-  - `causal_record`
-  - `causal_history`
-  - `memory_store` / `memory_query`
-  - `causal_graph_add`
-  - `causal_simulate` / `causal_backtrack`
-  - `log_failure`
-- Local redaction before cloud submission.
-- Local cache + telemetry buffering for resilience.
+## Features
 
-## Required configuration
+- **Causal Guard**: Deterministic command analysis for high-risk operations.
+- **Agent Ledger**: Every action, verdict, and outcome is recorded in a secure, immutable ledger.
+- **Zero-Friction Auth**: Device-based identification (no API keys to manage).
+- **Terminal First**: View governance events directly in your terminal with `npx causalos log`.
 
-Set both:
+## Getting Started
 
-- `CAUSAL_RUNTIME_URL` (for example, `https://mcp.causalos.xyz`)
-- `CAUSAL_API_KEY` (required unless explicitly running dev mode)
+### 1. Initialize Termyte
+Run this to generate your unique device ID and setup local config:
+```bash
+npx causalos init
+```
 
-Optional:
+### 2. Configure your Agent
+Add Termyte as an MCP server to your favorite tool.
 
-- `CAUSAL_ENV=production|development`
-- `CAUSAL_DEV_MODE=1` (explicit development override only)
-
-## MCP config example
-
+#### Claude Code config:
+Add the following to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -38,10 +31,20 @@ Optional:
       "command": "npx",
       "args": ["-y", "causalos"],
       "env": {
-        "CAUSAL_RUNTIME_URL": "https://mcp.causalos.xyz",
-        "CAUSAL_API_KEY": "sk-your-key"
+        "CAUSALOS_API_URL": "https://mcp.causalos.xyz"
       }
     }
   }
 }
 ```
+
+### 3. Usage
+Once configured, Termyte will automatically intercept sensitive tool calls. You can monitor the activity:
+```bash
+npx causalos log
+```
+
+## How it Works
+1. **Prepare**: The agent calls `causal_guard` with the proposed command.
+2. **Judge**: Termyte evaluates the risk level and historical context.
+3. **Commit**: After the agent executes the tool, it records the success/failure to the ledger.
